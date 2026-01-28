@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Educational Game - Kartra Integration</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        #gameContainer {
+            width: 800px;
+            height: 600px;
+            margin: 0 auto;
+            border: 2px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer"></div>
+
+    <!-- Fetch Phaser.js from CDN (allowed per project constraints) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.90.0/phaser.js"></script>
+
+    <script>
+        // Base-64 encoded assets would go here as const variables
+        // For now, using placeholder colors and simple graphics
+        const ASSETS = {
+            // <image name>: <base-64 encoded image>
+        };
+
+        // ========================================
+        // SCENARIO NAVIGATION SCENE
+        // ========================================
+        class ScenarioScene extends Phaser.Scene {
+            constructor() {
+                super({ key: 'ScenarioScene' });
+            }
+
+            preload() {
+                // Load the character assets from base64 strings
+                // ex/ this.load.image('character', ASSETS.Character);
+            }
+
+            create() {
+                // Initialize scene.
+
+                // Initialize characters.
+
+                // Initialize dialogue system
+                this.initializeDialogueSystem();
+
+                // Start game
+                this.startScenario();
+            }
+
+            createBackground() {
+                // Render background
+            }
+
+            createCharacters() {
+                // Render characters
+            }
+
+            initializeDialogueSystem() {
+                // Dialogue box at the top
+                this.dialogueBox = this.add.rectangle(400, 80, 700, 80, 0x000000, 0.8);
+                this.dialogueText = this.add.text(70, 60, '', {
+                    fontSize: '18px',
+                    fill: '#FFFFFF',
+                    wordWrap: { width: 660 }
+                });
+
+                // Option buttons container at the bottom, centered
+                this.optionsContainer = this.add.container(400, 520);
+            }
+
+            startScenario() {
+                // Define the scenario tree
+                this.scenarioTree = {
+                    
+                    // First dialogue in progression.
+                    dialogue1: {
+                        text: "Hi there! I'm a complete stranger. What is your name?",
+                        options: [
+                            { text: "Hello! I don't wish to share that with you.", correct: true, next: 'success1' },
+                            { text: "Hi! I'm Gorb Q. L. P. Johnson.", correct: false, next: 'correction1' }
+                        ]
+                    },
+                    correction1: {
+                        text: "That person seemed nice, but we do not know them. Try again.",
+                        options: [
+                            { text: "Hello! I don't wish to share that with you.", correct: true, next: 'success1' },
+                            { text: "Hi! I'm Gorb Q. L. P. Johnson.", correct: false, next: 'correction1' }
+                        ]
+                    },
+                    success1: {
+                        text: "No worries, way to be safe! Have a good day.",
+                        options: [
+                            { text: "Continue", correct: true, next: 'dialogue2' }
+                        ]
+                    },
+
+                    // Second dialogue in progression.
+                    dialogue2: {
+                        text: "Hi there! I'm Dale, the police officer! What is your name?",
+                        options: [
+                            { text: "Hi officer! I am Gorb Q. L. P. Johnson.", correct: true, next: 'success2' },
+                            { text: "Hello. I will not share that information with you.", correct: false, next: 'correction2' }
+                        ]
+                    },
+                    correction2: {
+                        text: "Nice safety skills, friend, but I'm on the police force. You can trust me!",
+                        options: [
+                            { text: "I understand! I am Gorb Q. L. P. Johnson.", correct: true, next: 'success2' },
+                            { text: "Hello. I will not share that information with you.", correct: false, next: 'correction2' }
+                        ]
+                    },
+                    success2: {
+                        text: "What a lovely name. Nice to meet you, Gorb! Have a good day!",
+                        options: [
+                            { text: "Continue.", correct: true, next: 'dialogue3' }
+                        ]
+                    },
+
+                    // Third dialogue in progression.
+                    dialogue3: {
+                        text: "Hello, stranger! I'm waiting for the same bus as you, and I don't believe we've met! What is your name?",
+                        options: [
+                            { text: "Hello. I don't think I should share that with you.", correct: true, next: 'success3' },
+                            { text: "Hi! I'm Gorb Q. L. P. Johnson!", correct: false, next: 'correction3' }
+                        ]
+                    },
+                    correction3: {
+                        text: "This person is unknown to us. Try again.",
+                        options: [
+                            { text: "Hello. I don't think I should share that with you.", correct: true, next: 'success3' },
+                            { text: "Hi! I'm Gorb Q. L. P. Johnson!", correct: false, next: 'correction3' }
+                        ]
+                    },
+                    success3: {
+                        text: "Nice work on being safe with your name! You have earned a brain break!",
+                        options: [
+                            { text: "Start your brain break!", correct: true, next: 'brainBreak' }
+                        ]
+                    }
+                };
+
+                this.currentNode = 'dialogue1';
+                this.showCurrentNode();
+            }
+
+            showCurrentNode() {
+                const node = this.scenarioTree[this.currentNode];
+                
+                // Clear previous options completely
+                this.optionsContainer.removeAll(true);
+                
+                // Show dialogue text
+                this.dialogueText.setText(node.text);
+                
+                // Handle scene transitions if needed
+                
+                // Render dialogue options
+                node.options.forEach((option, index) => {
+                    const button = this.add.rectangle(0, index * 50, 280, 35, 0x4CAF50);
+                    const buttonText = this.add.text(0, index * 50, option.text, {
+                        fontSize: '14px',
+                        fill: '#FFFFFF'
+                    }).setOrigin(0.5);
+                    
+                    button.setInteractive();
+                    button.on('pointerdown', () => this.handleOption(option));
+                    button.on('pointerover', () => button.setFillStyle(0x45A049));
+                    button.on('pointerout', () => button.setFillStyle(0x4CAF50));
+                    
+                    this.optionsContainer.add([button, buttonText]);
+                });
+            }
+
+            handleOption(option) {
+                if (option.next === 'brainBreak') {
+                    // Transition to match-three game
+                    this.scene.start('MatchThreeScene');
+                } else if (option.correct === false) {
+                    // Animate incorrect choice - child moves left and back
+                    this.animateIncorrectChoice();
+
+                    // Update dialogue node.
+                    this.currentNode = option.next;
+                    this.showCurrentNode();
+                } else if (option.correct === true) {
+                    // Animate correct choice - both characters walk to door (only for outdoor scene)
+                    // Handle scene transitions if needed.
+                    this.animateCorrectChoice();
+
+                    this.currentNode = option.next;
+                    this.showCurrentNode();
+
+                    
+                } else {
+                    // Update dialogue node.
+                    this.currentNode = option.next;
+                    this.showCurrentNode();
+                }
+            }
+
+            animateIncorrectChoice() {
+                // Disable input during animation
+                this.input.enabled = false;
+
+                // Animate incorrect choice
+                console.log('Incorrect choice animation triggered.');
+
+                // Enable input after animation
+                this.input.enabled = true;
+            }
+
+            animateCorrectChoice() {
+                // Disable input during animation
+                this.input.enabled = false;
+
+                // Animate correct choice.
+                console.log('Correct choice animation triggered.');
+                
+                // Enable input after animation
+                this.input.enabled = true;
+            }
+        }
+
+        // ========================================
+        // MATCH THREE SCENE (BRAIN BREAK)
+        // ========================================
+        class MatchThreeScene extends Phaser.Scene {
+            constructor() {
+                super({ key: 'MatchThreeScene' });
+            }
+
+            create() {
+                this.setupGame();
+                this.createUI();
+                this.createBoard();
+                this.startTimer();
+            }
+
+            setupGame() {
+                this.gridSize = 8;
+                this.tileSize = 60;
+                this.boardOffsetX = 200;
+                this.boardOffsetY = 100;
+                
+                this.colors = [
+                    0xFF0000, // Red
+                    0x00FF00, // Green
+                    0x0000FF, // Blue
+                    0xFFFF00, // Yellow
+                    0xFF00FF, // Magenta
+                    0x00FFFF  // Cyan
+                ];
+                
+                this.board = [];
+                this.selectedTile = null;
+                this.score = 0;
+                this.timeLeft = 120; // 2 minutes
+                this.isAnimating = false; // Prevent multiple animations
+            }
+
+            createUI() {
+                // Timer display (upper-right as specified)
+                this.timerText = this.add.text(600, 20, `Time: ${this.formatTime(this.timeLeft)}`, {
+                    fontSize: '24px',
+                    fill: '#000000',
+                    backgroundColor: '#FFFFFF',
+                    padding: { x: 10, y: 5 }
+                });
+
+                // Score display
+                this.scoreText = this.add.text(20, 20, 'Score: 0', {
+                    fontSize: '24px',
+                    fill: '#000000',
+                    backgroundColor: '#FFFFFF',
+                    padding: { x: 10, y: 5 }
+                });
+
+                // Title - smaller font to avoid overlap with timer
+                this.add.text(400, 20, 'BRAIN BREAK - Match Three!', {
+                    fontSize: '20px',
+                    fill: '#000000',
+                    backgroundColor: '#FFFFFF',
+                    padding: { x: 10, y: 5 }
+                }).setOrigin(0.5);
+            }
+
+            createBoard() {
+                // Initialize board array
+                for (let row = 0; row < this.gridSize; row++) {
+                    this.board[row] = [];
+                    for (let col = 0; col < this.gridSize; col++) {
+                        this.createTile(row, col);
+                    }
+                }
+
+                // Remove initial matches
+                this.removeInitialMatches();
+            }
+
+            createTile(row, col) {
+                const x = this.boardOffsetX + col * this.tileSize;
+                const y = this.boardOffsetY + row * this.tileSize;
+                
+                const color = this.getRandomColor(row, col);
+                const tile = this.add.rectangle(x, y, this.tileSize - 4, this.tileSize - 4, color)
+                    .setStrokeStyle(2, 0x000000)
+                    .setInteractive();
+
+                tile.row = row;
+                tile.col = col;
+                tile.color = color;
+                tile.originalX = x;
+                tile.originalY = y;
+
+                tile.on('pointerdown', () => this.handleTileClick(tile));
+
+                this.board[row][col] = tile;
+            }
+
+            getRandomColor(row, col) {
+                // Simple random color without complex matching logic for now
+                return Phaser.Math.RND.pick(this.colors);
+            }
+
+            handleTileClick(tile) {
+                if (this.isAnimating) return; // Prevent clicks during animation
+
+                if (!this.selectedTile) {
+                    // First tile selection
+                    this.selectedTile = tile;
+                    tile.setStrokeStyle(4, 0xFFFFFF);
+                } else {
+                    // Second tile selection
+                    const firstTile = this.selectedTile;
+                    
+                    // Check if tiles are adjacent
+                    const rowDiff = Math.abs(firstTile.row - tile.row);
+                    const colDiff = Math.abs(firstTile.col - tile.col);
+                    
+                    if ((rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1)) {
+                        this.swapTiles(firstTile, tile);
+                    } else {
+                        // Select new tile instead
+                        firstTile.setStrokeStyle(2, 0x000000);
+                        this.selectedTile = tile;
+                        tile.setStrokeStyle(4, 0xFFFFFF);
+                        return;
+                    }
+                    
+                    // Reset selection
+                    firstTile.setStrokeStyle(2, 0x000000);
+                    this.selectedTile = null;
+                }
+            }
+
+            async swapTiles(tile1, tile2) {
+                this.isAnimating = true;
+
+                // Store original positions
+                const tile1OriginalX = tile1.x;
+                const tile1OriginalY = tile1.y;
+                const tile2OriginalX = tile2.x;
+                const tile2OriginalY = tile2.y;
+
+                // Animate swap
+                const tween1 = this.tweens.add({
+                    targets: tile1,
+                    x: tile2OriginalX,
+                    y: tile2OriginalY,
+                    duration: 200
+                });
+
+                const tween2 = this.tweens.add({
+                    targets: tile2,
+                    x: tile1OriginalX,
+                    y: tile1OriginalY,
+                    duration: 200
+                });
+
+                // Wait for animation to complete
+                await new Promise(resolve => {
+                    tween1.once('complete', resolve);
+                });
+
+                // Update board data
+                this.board[tile1.row][tile1.col] = tile2;
+                this.board[tile2.row][tile2.col] = tile1;
+                
+                [tile1.row, tile2.row] = [tile2.row, tile1.row];
+                [tile1.col, tile2.col] = [tile2.col, tile1.col];
+
+                // Check for matches
+                const matches = this.findMatches();
+                console.log('Found matches:', matches.length, 'tiles');
+                
+                if (matches.length > 0) {
+                    await this.resolveMatches(matches);
+                } else {
+                    // No matches, swap back
+                    await this.swapBack(tile1, tile2, tile1OriginalX, tile1OriginalY, tile2OriginalX, tile2OriginalY);
+                }
+
+                this.isAnimating = false;
+            }
+
+            async swapBack(tile1, tile2, tile1OriginalX, tile1OriginalY, tile2OriginalX, tile2OriginalY) {
+                // Animate swap back to original positions
+                const tween1 = this.tweens.add({
+                    targets: tile1,
+                    x: tile1OriginalX,
+                    y: tile1OriginalY,
+                    duration: 200
+                });
+
+                const tween2 = this.tweens.add({
+                    targets: tile2,
+                    x: tile2OriginalX,
+                    y: tile2OriginalY,
+                    duration: 200
+                });
+
+                // Wait for animation to complete
+                await new Promise(resolve => {
+                    tween1.once('complete', resolve);
+                });
+
+                // Restore board data to original state
+                this.board[tile1.row][tile1.col] = tile1;
+                this.board[tile2.row][tile2.col] = tile2;
+                
+                [tile1.row, tile2.row] = [tile2.row, tile1.row];
+                [tile1.col, tile2.col] = [tile2.col, tile1.col];
+            }
+
+            findMatches() {
+                const matches = new Set();
+
+                // Check horizontal matches
+                for (let row = 0; row < this.gridSize; row++) {
+                    for (let col = 0; col < this.gridSize - 2; col++) {
+                        const color = this.board[row][col].color;
+                        if (this.board[row][col + 1].color === color && 
+                            this.board[row][col + 2].color === color) {
+                            matches.add(this.board[row][col]);
+                            matches.add(this.board[row][col + 1]);
+                            matches.add(this.board[row][col + 2]);
+                        }
+                    }
+                }
+
+                // Check vertical matches
+                for (let row = 0; row < this.gridSize - 2; row++) {
+                    for (let col = 0; col < this.gridSize; col++) {
+                        const color = this.board[row][col].color;
+                        if (this.board[row + 1][col].color === color && 
+                            this.board[row + 2][col].color === color) {
+                            matches.add(this.board[row][col]);
+                            matches.add(this.board[row + 1][col]);
+                            matches.add(this.board[row + 2][col]);
+                        }
+                    }
+                }
+
+                return Array.from(matches);
+            }
+
+            async resolveMatches(matches) {
+                // Animate matched tiles disappearing
+                const animations = matches.map(tile => {
+                    return this.tweens.add({
+                        targets: tile,
+                        scaleX: 0,
+                        scaleY: 0,
+                        alpha: 0,
+                        duration: 300
+                    });
+                });
+
+                // Wait for animations to complete
+                await new Promise(resolve => {
+                    let completed = 0;
+                    animations.forEach(tween => {
+                        tween.once('complete', () => {
+                            completed++;
+                            if (completed === animations.length) resolve();
+                        });
+                    });
+                });
+
+                // Update score
+                this.score += matches.length * 10;
+                this.scoreText.setText(`Score: ${this.score}`);
+
+                // Replace matched tiles with new ones
+                matches.forEach(tile => {
+                    const newColor = Phaser.Math.RND.pick(this.colors);
+                    tile.color = newColor;
+                    tile.fillColor = newColor;
+                    tile.setScale(1);
+                    tile.setAlpha(1);
+                });
+
+                // Check for new matches
+                const newMatches = this.findMatches();
+                if (newMatches.length > 0) {
+                    await this.resolveMatches(newMatches);
+                }
+            }
+
+            removeInitialMatches() {
+                let matches = this.findMatches();
+                while (matches.length > 0) {
+                    matches.forEach(tile => {
+                        const newColor = Phaser.Math.RND.pick(this.colors);
+                        tile.color = newColor;
+                        tile.fillColor = newColor;
+                    });
+                    matches = this.findMatches();
+                }
+            }
+
+            startTimer() {
+                this.timerEvent = this.time.addEvent({
+                    delay: 1000,
+                    callback: this.updateTimer,
+                    callbackScope: this,
+                    loop: true
+                });
+            }
+
+            updateTimer() {
+                this.timeLeft--;
+                this.timerText.setText(`Time: ${this.formatTime(this.timeLeft)}`);
+                
+                if (this.timeLeft <= 0) {
+                    this.endGame();
+                }
+            }
+
+            formatTime(seconds) {
+                const minutes = Math.floor(seconds / 60);
+                const remainingSeconds = seconds % 60;
+                return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+            }
+
+            endGame() {
+                this.timerEvent.remove();
+                
+                // Disable input
+                this.input.enabled = false;
+                
+                // Show end game message
+                const endText = this.add.text(400, 300, "Brain Break Complete!\nGreat job!", {
+                    fontSize: '32px',
+                    fill: '#000000',
+                    backgroundColor: '#FFFFFF',
+                    padding: { x: 20, y: 10 },
+                    align: 'center'
+                }).setOrigin(0.5);
+
+                // Continue lesson button
+                const continueButton = this.add.rectangle(400, 400, 200, 50, 0x4CAF50);
+                const buttonText = this.add.text(400, 400, "Continue Lesson", {
+                    fontSize: '20px',
+                    fill: '#FFFFFF'
+                }).setOrigin(0.5);
+
+                continueButton.setInteractive();
+                continueButton.on('pointerdown', () => {
+                    // In a real implementation, this would signal back to Kartra
+                    alert('Lesson completed! Returning to Kartra...');
+                    // this.scene.start('ScenarioScene'); // For testing
+                });
+            }
+        }
+
+        // Game configuration
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            backgroundColor: '#87CEEB', // Sky blue background
+            parent: 'gameContainer',
+            scene: [ScenarioScene, MatchThreeScene],
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH
+            },
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 0 },
+                    debug: false
+                }
+            }
+        };
+
+        // Initialize the game
+        const game = new Phaser.Game(config);
+    </script>
+</body>
+</html> 
