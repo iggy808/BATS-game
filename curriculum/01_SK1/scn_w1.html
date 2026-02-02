@@ -34,6 +34,15 @@
         // For now, using placeholder colors and simple graphics
         const ASSETS = {
             // <image name>: <base-64 encoded image>
+            Dialouge1: "",
+            Dialogue1_CorrectChoice: "",
+            Dialogue1_IncorrectChoice: "",
+            Dialogue2: "",
+            Dialogue2_CorrectChoice: "",
+            Dialogue2_IncorrectChoice: "",
+            Dialogue3: "",
+            Dialogue3_CorrectChoice: "",
+            Dialogue3_IncorrectChoice: ""
         };
 
         // ========================================
@@ -78,8 +87,72 @@
                     wordWrap: { width: 660 }
                 });
 
+                // Circular audio/dialogue button to the left of the dialogue box
+                const topBtnX = 30; // place left of the dialogue box, outside its bounds
+                const topBtnY = 80;
+                const topRadius = 18; // match option audio circles
+                this.topAudioCircle = this.add.circle(topBtnX, topBtnY, topRadius, 0x2b2b2b);
+                this.topAudioText = this.add.text(topBtnX, topBtnY, '!', { fontSize: '14px', fill: '#FFFFFF' }).setOrigin(0.5);
+                this.topAudioCircle.setInteractive({ useHandCursor: true });
+                this.topAudioCircle.on('pointerover', () => this.topAudioCircle.setFillStyle(0x3a3a3a));
+                this.topAudioCircle.on('pointerout', () => this.topAudioCircle.setFillStyle(0x2b2b2b));
+
                 // Option buttons container at the bottom, centered
                 this.optionsContainer = this.add.container(400, 520);
+            }
+
+            // Audio buttons are created per-option inside `showCurrentNode()`
+
+            // Play an audio asset from a base64 string stored in the ASSETS object.
+            // `key` should be the property name in the `ASSETS` const (e.g. 'clip1').
+            // Falls back to treating `key` as a URL if no base64 asset is present.
+            playAudio(keyOrUrl) {
+                console.log(keyOrUrl);
+                try {
+                    // Stop and cleanup previous audio
+                    if (this._audioPlayer) {
+                        try { this._audioPlayer.pause(); } catch (e) {}
+                        try { this._audioPlayer.currentTime = 0; } catch (e) {}
+                        if (this._audioObjectURL) {
+                            URL.revokeObjectURL(this._audioObjectURL);
+                            this._audioObjectURL = null;
+                        }
+                        this._audioPlayer = null;
+                    }
+
+                    // Look up base64 in ASSETS (assumes a base64 string exists there)
+                    const base64 = (typeof ASSETS !== 'undefined' && keyOrUrl && ASSETS.hasOwnProperty(keyOrUrl)) ? ASSETS[keyOrUrl] : null;
+
+                    if (base64 && base64.length > 0) {
+                        // Support either a full data: URL or raw base64 string
+                        const dataUrl = base64.startsWith('data:') ? base64 : `data:audio/mpeg;base64,${base64}`;
+
+                        // Convert dataURL to Blob and create an object URL for reliable playback
+                        const parts = dataUrl.split(',');
+                        const meta = parts[0];
+                        const b64 = parts[1];
+                        const mime = meta.split(':')[1].split(';')[0];
+                        const byteString = atob(b64);
+                        const ab = new ArrayBuffer(byteString.length);
+                        const ia = new Uint8Array(ab);
+                        for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+                        const blob = new Blob([ab], { type: mime });
+                        const url = URL.createObjectURL(blob);
+                        this._audioObjectURL = url;
+                        this._audioPlayer = new Audio(url);
+
+                    } else if (typeof keyOrUrl === 'string' && /^(https?:|data:|\/)/.test(keyOrUrl)) {
+                        // If a real URL or data: URL was passed, play it
+                        this._audioPlayer = new Audio(keyOrUrl);
+                    } else {
+                        console.warn('No audio asset found for key:', keyOrUrl);
+                        return;
+                    }
+
+                    this._audioPlayer.play().catch(err => console.warn('Audio play failed:', err));
+                } catch (e) {
+                    console.error('playAudio error', e);
+                }
             }
 
             startScenario() {
@@ -89,66 +162,75 @@
                     // First dialogue in progression.
                     dialogue1: {
                         text: "Hi there! I'm a complete stranger. What is your name?",
+                        nodeAudioKey: 'Dialouge1',
                         options: [
-                            { text: "Hello! I don't wish to share that with you.", correct: true, next: 'success1' },
-                            { text: "Hi! I'm Gorb Q. L. P. Johnson.", correct: false, next: 'correction1' }
+                            { text: "Hello! I don't wish to share that with you.", correct: true, next: 'success1', audioKey: 'Dialogue1_CorrectChoice' },
+                            { text: "Hi! I'm Gorb Q. L. P. Johnson.", correct: false, next: 'correction1', audioKey: 'Dialogue1_IncorrectChoice' }
                         ]
                     },
                     correction1: {
                         text: "That person seemed nice, but we do not know them. Try again.",
+                        nodeAudioKey: 'Dialogue1_IncorrectChoice',
                         options: [
-                            { text: "Hello! I don't wish to share that with you.", correct: true, next: 'success1' },
-                            { text: "Hi! I'm Gorb Q. L. P. Johnson.", correct: false, next: 'correction1' }
+                            { text: "Hello! I don't wish to share that with you.", correct: true, next: 'success1', audioKey: 'Dialogue1_CorrectChoice' },
+                            { text: "Hi! I'm Gorb Q. L. P. Johnson.", correct: false, next: 'correction1', audioKey: 'Dialogue1_IncorrectChoice' }
                         ]
                     },
                     success1: {
                         text: "No worries, way to be safe! Have a good day.",
+                        nodeAudioKey: 'Dialogue1_CorrectChoice',
                         options: [
-                            { text: "Continue", correct: true, next: 'dialogue2' }
+                            { text: "Continue", correct: true, next: 'dialogue2', audioKey: 'Dialogue1_CorrectChoice' }
                         ]
                     },
 
                     // Second dialogue in progression.
                     dialogue2: {
                         text: "Hi there! I'm Dale, the police officer! What is your name?",
+                        nodeAudioKey: 'Dialogue2',
                         options: [
-                            { text: "Hi officer! I am Gorb Q. L. P. Johnson.", correct: true, next: 'success2' },
-                            { text: "Hello. I will not share that information with you.", correct: false, next: 'correction2' }
+                            { text: "Hi officer! I am Gorb Q. L. P. Johnson.", correct: true, next: 'success2', audioKey: 'Dialogue2_CorrectChoice' },
+                            { text: "Hello. I will not share that information with you.", correct: false, next: 'correction2', audioKey: 'Dialogue2_IncorrectChoice' }
                         ]
                     },
                     correction2: {
                         text: "Nice safety skills, friend, but I'm on the police force. You can trust me!",
+                        nodeAudioKey: 'Dialogue2_IncorrectChoice',
                         options: [
-                            { text: "I understand! I am Gorb Q. L. P. Johnson.", correct: true, next: 'success2' },
-                            { text: "Hello. I will not share that information with you.", correct: false, next: 'correction2' }
+                            { text: "I understand! I am Gorb Q. L. P. Johnson.", correct: true, next: 'success2', audioKey: 'Dialogue2_CorrectChoice' },
+                            { text: "Hello. I will not share that information with you.", correct: false, next: 'correction2', audioKey: 'Dialogue2_IncorrectChoice' }
                         ]
                     },
                     success2: {
                         text: "What a lovely name. Nice to meet you, Gorb! Have a good day!",
+                        nodeAudioKey: 'Dialogue2_CorrectChoice',
                         options: [
-                            { text: "Continue.", correct: true, next: 'dialogue3' }
+                            { text: "Continue.", correct: true, next: 'dialogue3', audioKey: 'Dialogue2_CorrectChoice' }
                         ]
                     },
 
                     // Third dialogue in progression.
                     dialogue3: {
                         text: "Hello, stranger! I'm waiting for the same bus as you, and I don't believe we've met! What is your name?",
+                        nodeAudioKey: 'Dialogue3',
                         options: [
-                            { text: "Hello. I don't think I should share that with you.", correct: true, next: 'success3' },
-                            { text: "Hi! I'm Gorb Q. L. P. Johnson!", correct: false, next: 'correction3' }
+                            { text: "Hello. I don't think I should share that with you.", correct: true, next: 'success3', audioKey: 'Dialogue3_CorrectChoice' },
+                            { text: "Hi! I'm Gorb Q. L. P. Johnson!", correct: false, next: 'correction3', audioKey: 'Dialogue3_IncorrectChoice' }
                         ]
                     },
                     correction3: {
                         text: "This person is unknown to us. Try again.",
+                        nodeAudioKey: 'Dialogue3_IncorrectChoice',
                         options: [
-                            { text: "Hello. I don't think I should share that with you.", correct: true, next: 'success3' },
-                            { text: "Hi! I'm Gorb Q. L. P. Johnson!", correct: false, next: 'correction3' }
+                            { text: "Hello. I don't think I should share that with you.", correct: true, next: 'success3', audioKey: 'Dialogue3_CorrectChoice' },
+                            { text: "Hi! I'm Gorb Q. L. P. Johnson!", correct: false, next: 'correction3', audioKey: 'Dialogue3_IncorrectChoice' }
                         ]
                     },
                     success3: {
                         text: "Nice work on being safe with your name! You have earned a brain break!",
+                        nodeAudioKey: 'Dialogue3_CorrectChoice',
                         options: [
-                            { text: "Start your brain break!", correct: true, next: 'brainBreak' }
+                            { text: "Start your brain break!", correct: true, next: 'brainBreak', audioKey: 'Dialogue3_CorrectChoice' }
                         ]
                     }
                 };
@@ -165,24 +247,81 @@
                 
                 // Show dialogue text
                 this.dialogueText.setText(node.text);
+
+                // Bind the top audio circle to the current node's audio (if present)
+                if (this.topAudioCircle) {
+                    try {
+                        this.topAudioCircle.off('pointerdown');
+                    } catch (e) {}
+                    const nodeAudio = node.nodeAudioKey || null;
+                    this.topAudioCircle.on('pointerdown', () => { if (nodeAudio) this.playAudio(nodeAudio); });
+                }
                 
                 // Handle scene transitions if needed
                 
-                // Render dialogue options
-                node.options.forEach((option, index) => {
-                    const button = this.add.rectangle(0, index * 50, 600, 35, 0x4CAF50);
-                    const buttonText = this.add.text(0, index * 50, option.text, {
-                        fontSize: '14px',
-                        fill: '#FFFFFF'
+                // Render dialogue options with per-option audio buttons.
+                const btnStyle = { fill: 0x4CAF50, over: 0x45A049 };
+
+                if (node.options.length === 1) {
+                    const opt = node.options[0];
+                    // Single centered button
+                    const btnWidth = 360;
+                    const btn = this.add.rectangle(0, 0, btnWidth, 44, btnStyle.fill).setOrigin(0.5);
+                    const btnText = this.add.text(0, 0, opt.text, {
+                        fontSize: '16px',
+                        fill: '#FFFFFF',
+                        align: 'center',
+                        wordWrap: { width: btnWidth - 40 }
                     }).setOrigin(0.5);
-                    
-                    button.setInteractive();
-                    button.on('pointerdown', () => this.handleOption(option));
-                    button.on('pointerover', () => button.setFillStyle(0x45A049));
-                    button.on('pointerout', () => button.setFillStyle(0x4CAF50));
-                    
-                    this.optionsContainer.add([button, buttonText]);
-                });
+
+                    btn.setInteractive({ useHandCursor: true });
+                    btn.on('pointerdown', () => this.handleOption(opt));
+                    btn.on('pointerover', () => btn.setFillStyle(btnStyle.over));
+                    btn.on('pointerout', () => btn.setFillStyle(btnStyle.fill));
+
+                    // Audio circle to left of the centered button
+                    const radius = 18;
+                    const circleX = - (btnWidth / 2) - 28; // left of button
+                    const circleY = 0;
+                    const circle = this.add.circle(circleX, circleY, radius, 0x2b2b2b);
+                    const circleTxt = this.add.text(circleX, circleY, '!', { fontSize: '14px', fill: '#FFFFFF' }).setOrigin(0.5);
+                    circle.setInteractive({ useHandCursor: true });
+                    circle.on('pointerdown', () => { if (opt.audioKey) this.playAudio(opt.audioKey); });
+                    circle.on('pointerover', () => circle.setFillStyle(0x3a3a3a));
+                    circle.on('pointerout', () => circle.setFillStyle(0x2b2b2b));
+
+                    this.optionsContainer.add([btn, btnText, circle, circleTxt]);
+                } else {
+                    // Multiple stacked options (centered stack)
+                    const stackHeight = (node.options.length - 1) * 50;
+                    node.options.forEach((option, index) => {
+                        const y = index * 50 - ((node.options.length - 1) * 25);
+                        const button = this.add.rectangle(0, y, 600, 36, btnStyle.fill).setOrigin(0.5);
+                        const buttonText = this.add.text(0, y, option.text, {
+                            fontSize: '14px',
+                            fill: '#FFFFFF',
+                            align: 'center',
+                            wordWrap: { width: 560 }
+                        }).setOrigin(0.5);
+
+                        button.setInteractive({ useHandCursor: true });
+                        button.on('pointerdown', () => this.handleOption(option));
+                        button.on('pointerover', () => button.setFillStyle(btnStyle.over));
+                        button.on('pointerout', () => button.setFillStyle(btnStyle.fill));
+
+                        // Audio circle to left of each stacked button
+                        const radius = 18;
+                        const circleX = - (600 / 2) - 28; // left of full-width button
+                        const circle = this.add.circle(circleX, y, radius, 0x2b2b2b);
+                        const circleTxt = this.add.text(circleX, y, '!', { fontSize: '14px', fill: '#FFFFFF' }).setOrigin(0.5);
+                        circle.setInteractive({ useHandCursor: true });
+                        circle.on('pointerdown', () => { if (option.audioKey) this.playAudio(option.audioKey); });
+                        circle.on('pointerover', () => circle.setFillStyle(0x3a3a3a));
+                        circle.on('pointerout', () => circle.setFillStyle(0x2b2b2b));
+
+                        this.optionsContainer.add([button, buttonText, circle, circleTxt]);
+                    });
+                }
             }
 
             handleOption(option) {
